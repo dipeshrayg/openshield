@@ -414,3 +414,20 @@ def test_devops_client_built_when_env_vars_present(monkeypatch):
     assert isinstance(fresh_client.devops_client, DevOpsClient)
     assert fresh_client.devops_client.organization_url == "https://dev.azure.com/test-org"
     assert fresh_client.devops_client.project == "test-project"
+
+
+def test_list_key_vault_certificates_distinguishes_empty_from_failure(client):
+    """AZ-KV-005 needs to tell a vault with no certificates from one it could not read,
+    while the legacy get_key_vault_certificates() keeps returning [] for scan() callers."""
+    with patch("azure.keyvault.certificates.CertificateClient") as constructor:
+        call = constructor.return_value.list_properties_of_certificates
+
+        call.return_value = [SimpleNamespace(name="one")]
+        assert [c.name for c in client.list_key_vault_certificates("kv")] == ["one"]
+
+        call.return_value = []
+        assert client.list_key_vault_certificates("kv") == []
+
+        call.side_effect = RuntimeError("Key Vault unavailable")
+        assert client.list_key_vault_certificates("kv") is None
+        assert client.get_key_vault_certificates("kv") == []

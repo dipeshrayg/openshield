@@ -74,7 +74,7 @@ class MockAzureClient:
         self._pg_flex_parameters: Dict[Tuple[str, str], List[Any]] = {}
         self._sql_auditing: Dict[Tuple[str, str], Any] = {}
         self._sql_auditing_default: Any = None
-        self._kv_certificates: Dict[str, List[Any]] = {}
+        self._kv_certificates: Dict[str, Optional[List[Any]]] = {}
         self._kv_keys: Dict[str, List[Any]] = {}
         self._diagnostic_settings: Dict[str, Optional[bool]] = {}
         self._diagnostic_default: Optional[bool] = False
@@ -471,12 +471,16 @@ class MockAzureClient:
     # Key Vault — certificates & keys (data plane)                          #
     # ------------------------------------------------------------------ #
 
-    def set_key_vault_certificates(self, vault_name: str, certificates: List[Any]) -> "MockAzureClient":
+    def set_key_vault_certificates(self, vault_name: str, certificates: Optional[List[Any]]) -> "MockAzureClient":
+        """Pass ``None`` to simulate the certificate list call failing."""
         self._kv_certificates[vault_name] = certificates
         return self
 
-    def get_key_vault_certificates(self, vault_name: str) -> List[Any]:
+    def list_key_vault_certificates(self, vault_name: str) -> Optional[List[Any]]:
         return self._kv_certificates.get(vault_name, [])
+
+    def get_key_vault_certificates(self, vault_name: str) -> List[Any]:
+        return self.list_key_vault_certificates(vault_name) or []
 
     def set_key_vault_keys(self, vault_name: str, keys: List[Any]) -> "MockAzureClient":
         self._kv_keys[vault_name] = keys

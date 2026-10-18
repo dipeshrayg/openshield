@@ -1177,8 +1177,12 @@ class AzureClient:
         """List all Key Vaults, or ``[]`` on failure (legacy scan() callers)."""
         return self.list_key_vaults() or []
 
-    def get_key_vault_certificates(self, vault_name: str) -> List[Any]:
-        """List all certificates in a Key Vault using the Key Vault data plane API."""
+    def list_key_vault_certificates(self, vault_name: str) -> Optional[List[Any]]:
+        """List all certificates in a Key Vault using the Key Vault data plane API.
+
+        Returns ``None`` when the call fails, so a vault whose certificates could not
+        be read is not mistaken for one with no certificates; see list_key_vaults().
+        """
         try:
             from azure.keyvault.certificates import CertificateClient
 
@@ -1186,8 +1190,12 @@ class AzureClient:
             client = CertificateClient(vault_url=vault_url, credential=self.credential)
             return list(client.list_properties_of_certificates())
         except Exception as exc:
-            logger.error("get_key_vault_certificates(%s) failed: %s", vault_name, exc)
-            return []
+            logger.error("list_key_vault_certificates(%s) failed: %s", vault_name, exc)
+            return None
+
+    def get_key_vault_certificates(self, vault_name: str) -> List[Any]:
+        """List all certificates in a Key Vault, or ``[]`` on failure (legacy scan() callers)."""
+        return self.list_key_vault_certificates(vault_name) or []
 
     def get_key_vault_keys(self, vault_name: str) -> List[Any]:
         """List all keys in a Key Vault using the Key Vault data plane API."""

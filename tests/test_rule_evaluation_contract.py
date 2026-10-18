@@ -9,6 +9,7 @@ something real to compare.
 """
 
 import importlib
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict
 
@@ -54,21 +55,67 @@ class _UniformInventoryClient(MockAzureClient):
 # ── Per-rule fixtures: at least one PASS and one FAIL ───────────────────────
 
 
-def _kv_006_fixture() -> MockAzureClient:
-    def vault(name: str, **props: Any) -> Any:
-        return make_resource(
-            id=f"/subscriptions/{_SUB}/resourceGroups/rg/providers/Microsoft.KeyVault/vaults/{name}",
-            name=name,
-            location="eastus",
-            properties=make_resource(**props),
-        )
+def _vault(name: str, **props: Any) -> Any:
+    return make_resource(
+        id=f"/subscriptions/{_SUB}/resourceGroups/rg/providers/Microsoft.KeyVault/vaults/{name}",
+        name=name,
+        location="eastus",
+        properties=make_resource(**props),
+    )
 
+
+def _kv_001_fixture() -> MockAzureClient:
     return MockAzureClient().set_key_vaults(
-        [vault("kv-rbac", enable_rbac_authorization=True), vault("kv-policies", enable_rbac_authorization=False)]
+        [_vault("kv-sd-on", enable_soft_delete=True), _vault("kv-sd-off", enable_soft_delete=False)]
+    )
+
+
+def _kv_002_fixture() -> MockAzureClient:
+    return MockAzureClient().set_key_vaults(
+        [
+            _vault("kv-private", public_network_access="Disabled", private_endpoint_connections=[]),
+            _vault("kv-public", public_network_access="Enabled", private_endpoint_connections=[]),
+        ]
+    )
+
+
+def _kv_003_fixture() -> MockAzureClient:
+    on, off = _vault("kv-diag-on"), _vault("kv-diag-off")
+    return (
+        MockAzureClient()
+        .set_key_vaults([on, off])
+        .set_diagnostic_settings(on.id, True)
+        .set_diagnostic_settings(off.id, False)
+    )
+
+
+def _kv_004_fixture() -> MockAzureClient:
+    return MockAzureClient().set_key_vaults(
+        [_vault("kv-pp-on", enable_purge_protection=True), _vault("kv-pp-off", enable_purge_protection=False)]
+    )
+
+
+def _kv_005_fixture() -> MockAzureClient:
+    now = datetime.now(timezone.utc)
+    certs = [
+        make_resource(name="cert-fresh", expires_on=now + timedelta(days=200), policy=None),
+        make_resource(name="cert-expiring", expires_on=now + timedelta(days=10), policy=None),
+    ]
+    return MockAzureClient().set_key_vaults([_vault("kv-certs")]).set_key_vault_certificates("kv-certs", certs)
+
+
+def _kv_006_fixture() -> MockAzureClient:
+    return MockAzureClient().set_key_vaults(
+        [_vault("kv-rbac", enable_rbac_authorization=True), _vault("kv-policies", enable_rbac_authorization=False)]
     )
 
 
 FIXTURES: Dict[str, Callable[[], MockAzureClient]] = {
+    "AZ-KV-001": _kv_001_fixture,
+    "AZ-KV-002": _kv_002_fixture,
+    "AZ-KV-003": _kv_003_fixture,
+    "AZ-KV-004": _kv_004_fixture,
+    "AZ-KV-005": _kv_005_fixture,
     "AZ-KV-006": _kv_006_fixture,
 }
 

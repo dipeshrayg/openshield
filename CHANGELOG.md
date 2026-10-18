@@ -9,6 +9,7 @@ OpenShield uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Migrate the Key Vault rules `AZ-KV-001` through `AZ-KV-005` to the `evaluate()` coverage contract for issue #376: each reports PASS, FAIL, UNKNOWN or NOT_APPLICABLE per vault (per certificate for `AZ-KV-005`) with the inspected values as evidence, a failed vault or certificate list is ERROR/UNKNOWN instead of a clean result, and `scan()` returns the findings attached to FAIL evaluations. Adds `AzureClient.list_key_vault_certificates()`, which returns `None` on failure.
 - Add the evaluate() contract foundation for issue #369: `AzureClient.list_storage_accounts()` and `list_key_vaults()` return `None` when the list call fails, shared `inventory_unavailable()`, `no_resources_found()` and `fail_findings()` helpers with standard reason codes in `scanner/evaluation.py`, and `tests/test_rule_evaluation_contract.py`, which every rule exposing `evaluate()` must pass.
 - Add the remediation approval, idempotency, audit and rescan gate (`api/models/remediation.py`, `docs/remediation-gate.md`) for issue #266: approved-only, allowlisted, at-most-once execution grants with an append-only audit trail and rescan-based verification. Proposal-only; nothing executes a playbook.
 - Add all ten evidence-rich enterprise network and perimeter controls `AZ-NET-018` through `AZ-NET-027` for issue #253, preserving API failures and incomplete data as indeterminate.
